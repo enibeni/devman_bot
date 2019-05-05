@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+from requests import Response
 import telegram
 from dotenv import load_dotenv
 
@@ -11,15 +12,16 @@ def send_message_to_telegram(message):
 
 
 def compose_message(raw_status_data):
-    message = f'У вас проверили работу ' \
-        f'\"{raw_status_data["new_attempts"][-1]["lesson_title"]}\" \n' \
-        f'https://dvmn.org{raw_status_data["new_attempts"][-1]["lesson_url"]}'
+    last_attempt_data = raw_status_data["new_attempts"][-1]
+    message = f'''У вас проверили работу 
+\"{last_attempt_data["lesson_title"]}\"
+https://dvmn.org{last_attempt_data["lesson_url"]}'''
 
-    if raw_status_data['new_attempts'][-1]['is_negative']:
-        message = f'{message} \n\nК сожалению, в работе нашлись ошибки'
+    if last_attempt_data['is_negative']:
+        message = f'{message} К сожалению, в работе нашлись ошибки'
     else:
-        message = f'{message} \n\nПреподавателю все понравилось, ' \
-            f'можно преступать к следующему уроку!'
+        message = f'''{message} Преподавателю все понравилось,  
+можно преступать к следующему уроку!'''
     return message
 
 
@@ -35,7 +37,8 @@ def start_devman_listener(devman_api_key):
                 timeout=long_polling_timeout
             )
             if not response.ok:
-                return None
+                print('raise_for_status')
+                Response.raise_for_status()
             if response.json()['status'] == 'timeout':
                 timestamp = response.json()['timestamp_to_request']
             else:
@@ -44,6 +47,12 @@ def start_devman_listener(devman_api_key):
                 timestamp = time.time()
         except requests.exceptions.ReadTimeout:
             pass
+        except requests.ConnectionError:
+            time.sleep(5)
+            timestamp = time.time()
+        except telegram.error.NetworkError:
+            time.sleep(5)
+            timestamp = time.time()
 
 
 if __name__ == '__main__':
