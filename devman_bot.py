@@ -1,7 +1,6 @@
 import os
 import time
 import requests
-from requests import Response
 import telegram
 from dotenv import load_dotenv
 
@@ -36,23 +35,21 @@ def start_devman_listener(devman_api_key):
                 params={'timestamp': timestamp},
                 timeout=long_polling_timeout
             )
+            review_data = response.json()
             if not response.ok:
-                print('raise_for_status')
-                Response.raise_for_status()
-            if response.json()['status'] == 'timeout':
-                timestamp = response.json()['timestamp_to_request']
+                response.raise_for_status()
+            elif review_data['status'] == 'timeout':
+                timestamp = review_data['timestamp_to_request']
             else:
-                message = compose_message(response.json())
+                message = compose_message(review_data)
                 send_message_to_telegram(message)
-                timestamp = time.time()
+                timestamp = review_data['last_attempt_timestamp']
         except requests.exceptions.ReadTimeout:
             pass
         except requests.ConnectionError:
             time.sleep(5)
-            timestamp = time.time()
         except telegram.error.NetworkError:
             time.sleep(5)
-            timestamp = time.time()
 
 
 if __name__ == '__main__':
