@@ -3,6 +3,7 @@ import time
 import requests
 import telegram
 from dotenv import load_dotenv
+import logging
 
 
 def send_message_to_telegram(message):
@@ -25,6 +26,7 @@ https://dvmn.org{last_attempt_data["lesson_url"]}'''
 
 
 def start_devman_listener(devman_api_key):
+    logging.info('Бот запущен')
     long_polling_timeout = 90
     timestamp = time.time()
     while True:
@@ -44,6 +46,7 @@ def start_devman_listener(devman_api_key):
                 message = compose_message(review_data)
                 send_message_to_telegram(message)
                 timestamp = review_data['last_attempt_timestamp']
+                logging.info('Отправлено сообщение об изменении статуса проверки работы')
         except requests.exceptions.ReadTimeout:
             pass
         except requests.ConnectionError:
@@ -54,6 +57,7 @@ def start_devman_listener(devman_api_key):
 
 if __name__ == '__main__':
     load_dotenv()
+    logging.basicConfig(level=logging.INFO)
     start_devman_listener(os.getenv('DEVMAN_API_KEY'))
 
 
